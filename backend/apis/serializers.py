@@ -64,4 +64,4 @@ class BusinessImagesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BusinessImages
-        fields = ['id', 'main_image', 'image_1', 'image_2', 'image_3', 'image_4', 'business', 'business_name']
+        fields = ['id', 'image_1', 'image_2', 'image_3', 'image_4', 'business', 'business_name']
