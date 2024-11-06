@@ -1,5 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework import generics, status, permissions
 from .models import Business, Users, Event, Review, Inventory, Messages, BusinessImages
 from .serializers import (
@@ -12,7 +13,8 @@ from .permissions import IsBusinessOwner
 class BusinessListCreateView(generics.ListCreateAPIView):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
     
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user.username)
@@ -20,7 +22,8 @@ class BusinessListCreateView(generics.ListCreateAPIView):
 class BusinessDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
-    permission_classes = [permissions.IsAuthenticated, IsBusinessOwner] 
+    # permission_classes = [permissions.IsAuthenticated, IsBusinessOwner] 
+    permission_classes = [IsBusinessOwner] 
 
 class UsersListCreateView(generics.ListCreateAPIView):
     queryset = Users.objects.all()
