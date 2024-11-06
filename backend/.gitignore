@@ -1,0 +1,38 @@
+# Python bytecode files
+*.pyc
+*.pyo
+__pycache__/
+
+# Database files
+db.sqlite3
+*.db
+
+# Django migrations
+*/migrations/*
+
+# Static files
+/staticfiles/
+
+# Media files
+/media/
+
+# Django settings (sensitive files)
+settings.py
+
+# Environment variable files
+.env
+
+# Log files
+*.log
+
+# IDE/Editor files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test tools
+*.coverage
+tox/
