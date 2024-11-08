@@ -10,20 +10,25 @@ from .serializers import (
 )
 from .permissions import IsBusinessOwner
 
-class BusinessListCreateView(generics.ListCreateAPIView):
-    queryset = Business.objects.all()
-    serializer_class = BusinessSerializer
-    # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [AllowAny]
-    
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user.username)
-
 class BusinessDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
     # permission_classes = [permissions.IsAuthenticated, IsBusinessOwner] 
     permission_classes = [IsBusinessOwner] 
+
+class IsBusinessOwnerPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        # Only allow users with is_business_owner=True to create or update businesses
+        return request.user.is_authenticated and request.user.is_business_owner
+
+class BusinessListCreateView(generics.ListCreateAPIView):
+    queryset = Business.objects.all()
+    serializer_class = BusinessSerializer
+    permission_classes = [IsBusinessOwnerPermission]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
 
 class UsersListCreateView(generics.ListCreateAPIView):
     queryset = Users.objects.all()

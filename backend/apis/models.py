@@ -4,6 +4,54 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 
+import os
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+# Temporary upload path for unsaved instances
+def temporary_image_upload_path(instance, filename):
+    return os.path.join('temporary', filename)
+
+def business_image_upload_path(instance, filename):
+    if isinstance(instance, BusinessImages):
+        return os.path.join('business', str(instance.business.id), 'optional', filename)
+    elif isinstance(instance, Business):
+        return os.path.join('business', str(instance.id), 'main', filename)
+    return os.path.join('business', 'default', filename)
+
+class BusinessImages(models.Model):
+    business = models.ForeignKey("Business", on_delete=models.CASCADE, related_name='business_image_set')
+    image_1 = models.ImageField(upload_to=temporary_image_upload_path, null=True, blank=True)
+    image_2 = models.ImageField(upload_to=temporary_image_upload_path, null=True, blank=True)
+    image_3 = models.ImageField(upload_to=temporary_image_upload_path, null=True, blank=True)
+    image_4 = models.ImageField(upload_to=temporary_image_upload_path, null=True, blank=True)
+
+    def __str__(self):
+        return f"Images for {self.business.b_name}"
+
+@receiver(post_save, sender=BusinessImages)
+def update_image_path(sender, instance, **kwargs):
+    # Check if the path update is necessary to avoid recursive saving
+    updated = False
+    if instance.image_1 and 'temporary' in instance.image_1.name:
+        instance.image_1.name = business_image_upload_path(instance, os.path.basename(instance.image_1.name))
+        updated = True
+    if instance.image_2 and 'temporary' in instance.image_2.name:
+        instance.image_2.name = business_image_upload_path(instance, os.path.basename(instance.image_2.name))
+        updated = True
+    if instance.image_3 and 'temporary' in instance.image_3.name:
+        instance.image_3.name = business_image_upload_path(instance, os.path.basename(instance.image_3.name))
+        updated = True
+    if instance.image_4 and 'temporary' in instance.image_4.name:
+        instance.image_4.name = business_image_upload_path(instance, os.path.basename(instance.image_4.name))
+        updated = True
+
+    # Save only if any path was updated to prevent infinite loop
+    if updated:
+        instance.save(update_fields=['image_1', 'image_2', 'image_3', 'image_4'])
+
+
+
 def inventory_image_distributor(instances, filename):
      return os.path.join('business', f'{instances.business.b_name}', f'{instances.business.id}', 'products', filename)
 
@@ -18,13 +66,7 @@ def default_work_time():
         "Sunday": {"open": "Closed", "close": "Closed"},
     }
 
-def business_image_upload_to(instance, filename):
-    business_id = str(instance.business.id)
-    if isinstance(instance, BusinessImages):
-        return os.path.join('business', business_id, 'optional', filename)
-    elif isinstance(instance, Business):
-        return os.path.join('business', business_id, 'main', filename)
-            
+
 
 class Event(models.Model):
     business = models.ForeignKey('Business', on_delete=models.CASCADE, related_name='business_events')
@@ -39,15 +81,6 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.name} - {self.business.b_name}"
 
-class BusinessImages(models.Model):
-    business = models.ForeignKey("Business", on_delete=models.CASCADE, related_name='business_image_set')
-    image_1 = models.ImageField(upload_to=business_image_upload_to, null=True, blank=True)
-    image_2 = models.ImageField(upload_to=business_image_upload_to, null=True, blank=True)
-    image_3 = models.ImageField(upload_to=business_image_upload_to, null=True, blank=True)
-    image_4 = models.ImageField(upload_to=business_image_upload_to, null=True, blank=True)
-
-    def __str__(self):
-        return f"Images for {self.business.b_name} (Main: {self.main_image.name})"
 
 class Users(AbstractUser):
     location = models.CharField(max_length=50)
@@ -75,7 +108,7 @@ class Business(models.Model):
     ]
     
     b_name = models.CharField(max_length=50)
-    owner = models.CharField(max_length=50)
+    owner = models.ForeignKey('Users', on_delete=models.CASCADE)
     address = models.TextField()
     zipcode = models.CharField(max_length=20, blank=True, null=True)
     phone = models.CharField(max_length=12, unique=True)
@@ -84,8 +117,8 @@ class Business(models.Model):
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     date_registered = models.DateTimeField(auto_now_add=True)
-    images = models.ImageField(upload_to=business_image_upload_to)
-    work_time = models.JSONField(blank=False, default=default_work_time)
+    images = models.ImageField(upload_to=temporary_image_upload_path)
+    work_time = models.JSONField(blank=False, default=default_work_time, null=True)
     
     def __str__(self):
         return f"{self.b_name} - {self.owner} ({self.category})"
