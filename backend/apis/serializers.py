@@ -65,3 +65,25 @@ class BusinessImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessImages
         fields = ['id', 'image_1', 'image_2', 'image_3', 'image_4', 'business', 'business_name']
+
+
+class UserSignUpSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Users
+        fields = ['username', 'password', 'email', 'location', 'zipcode', 'is_business_owner', 'bio', 'profile_picture']
+        extra_kwargs = {
+            'password': {'write_only': True},
+        }
+
+    def create(self, validated_data):
+        user = Users.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data.get('email', ''),
+            location=validated_data.get('location', ''),
+            zipcode=validated_data.get('zipcode', ''),  
+            is_business_owner=validated_data.get('is_business_owner', False),
+            bio=validated_data.get('bio', ''),
+            profile_picture=validated_data.get('profile_picture', None)
+        )
+        return user

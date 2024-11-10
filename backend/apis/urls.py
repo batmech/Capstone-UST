@@ -6,7 +6,9 @@ from .views import (
     ReviewListCreateView, ReviewDetailView,
     InventoryListCreateView, InventoryDetailView,
     MessagesListCreateView, MessagesDetailView,
-    BusinessImagesListCreateView, BusinessImagesDetailView
+    BusinessImagesListCreateView, BusinessImagesDetailView,
+    UserSignUpView,
+    LoginView
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -32,7 +34,10 @@ urlpatterns = [
     path('business-images/', BusinessImagesListCreateView.as_view(), name='business-images-list-create'),
     path('business-images/<int:pk>/', BusinessImagesDetailView.as_view(), name='business-images-detail'),
     
-    path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('signup/', UserSignUpView.as_view(), name='user_signup'),
+    path('login/', LoginView.as_view(), name='user_login'),
 
 ]

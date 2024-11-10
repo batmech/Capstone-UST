@@ -3,8 +3,6 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-
-import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -50,8 +48,6 @@ def update_image_path(sender, instance, **kwargs):
     if updated:
         instance.save(update_fields=['image_1', 'image_2', 'image_3', 'image_4'])
 
-
-
 def inventory_image_distributor(instances, filename):
      return os.path.join('business', f'{instances.business.b_name}', f'{instances.business.id}', 'products', filename)
 
@@ -66,8 +62,6 @@ def default_work_time():
         "Sunday": {"open": "Closed", "close": "Closed"},
     }
 
-
-
 class Event(models.Model):
     business = models.ForeignKey('Business', on_delete=models.CASCADE, related_name='business_events')
     name = models.CharField(max_length=100)
@@ -75,26 +69,28 @@ class Event(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     status = models.CharField(max_length=20, choices=[('draft', 'Draft'), ('published', 'Published'), ('cancelled', 'Cancelled')])
-    image = models.ImageField(upload_to='eventImages')
+    image = models.ImageField(upload_to='eventImages', null=True, blank=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     
     def __str__(self):
         return f"{self.name} - {self.business.b_name}"
 
-
 class Users(AbstractUser):
     location = models.CharField(max_length=50)
-    zipcode = models.CharField(max_length=20, blank=True, null=True)
     is_business_owner = models.BooleanField(default=False)
+    zipcode = models.CharField(max_length=10, blank=True, null=True)  # Correctly included
     bio = models.TextField(blank=True)
     profile_picture = models.ImageField(upload_to='profiles/')
     last_login = models.DateTimeField(auto_now=True)  
+
+    is_superuser = models.BooleanField(default=False)
+    is_staff = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if not self.pk:  
             self.last_login = timezone.now()  
         super().save(*args, **kwargs)
-
 
     def __str__(self):
         return self.username
@@ -122,7 +118,6 @@ class Business(models.Model):
     
     def __str__(self):
         return f"{self.b_name} - {self.owner} ({self.category})"
-    
 
 class Inventory(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
@@ -142,7 +137,6 @@ class Messages(models.Model):
     content = models.TextField()
     date = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
-    
 
 class Review(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
