@@ -90,7 +90,7 @@ class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = EventSerializer
 
 class ReviewListCreateView(generics.ListCreateAPIView):
-    queryset = Review.objects.all()
+    queryset = Review.objects.all().order_by('business', '-rating')
     serializer_class = ReviewSerializer
 
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
