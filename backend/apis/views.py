@@ -6,6 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Business, Users, Event, Review, Inventory, Messages, BusinessImages
+from rest_framework.throttling import UserRateThrottle
 from .serializers import (
     BusinessSerializer, UsersSerializer, EventSerializer, 
     ReviewSerializer, InventorySerializer, MessagesSerializer, 
@@ -15,10 +16,10 @@ from .serializers import (
 
 class IsAuthenticatedOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        # Allow read-only access to unauthenticated users
+        
         if request.method in permissions.SAFE_METHODS:
             return True
-        # Allow create only for authenticated users
+        
         return request.user.is_authenticated
 
 class IsBusinessOwnerPermission(permissions.BasePermission):
@@ -29,13 +30,13 @@ class BusinessDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
     
-    # Use AllowAny for GET requests to allow anyone to view
+    
     permission_classes = [AllowAny]
 
     def get_permissions(self):
         if self.request.method in ['POST', 'PUT', 'DELETE']:
-            return [IsAuthenticated()]  # Only authenticated users can create, update, or delete
-        return super().get_permissions()  # Allow everyone to view the business details with GET
+            return [IsAuthenticated()]  
+        return super().get_permissions()  
 
 
 class BusinessListCreateView(generics.ListCreateAPIView):
@@ -50,11 +51,19 @@ class BusinessListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def perform_create(self, serializer):
-        # Only restrict creation to authenticated users
+        
         if self.request.user.is_authenticated:
             serializer.save(owner=self.request.user)
         else:
             raise PermissionDenied("You must be logged in to create a business.")
+
+class BusinessOwnerView(generics.ListAPIView):
+    serializer_class = BusinessSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Filter businesses based on the owner
+        return Business.objects.filter(owner=self.request.user)
 
 
 class UsersListCreateView(generics.ListCreateAPIView):
@@ -90,8 +99,60 @@ class EventDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = EventSerializer
 
 class ReviewListCreateView(generics.ListCreateAPIView):
-    queryset = Review.objects.all().order_by('business', '-rating')
     serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        # Get the queryset based on the business and rating parameters
+        queryset = Review.objects.all().order_by('business', '-rating')
+        
+        business = self.request.query_params.get('business', None)
+        rating = self.request.query_params.get('rating', None)
+
+        if business:
+            queryset = queryset.filter(business__id=business)  # Filter by business ID
+        if rating:
+            queryset = queryset.filter(rating=rating)  # Filter by rating
+
+        queryset = queryset.order_by('-rating') 
+        
+        return queryset
+
+class ReviewListCreateView(generics.ListCreateAPIView):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        # Get the queryset based on the business and rating parameters
+        queryset = Review.objects.all().order_by('business', '-rating')
+        
+        business = self.request.query_params.get('business', None)
+        rating = self.request.query_params.get('rating', None)
+
+        if business:
+            queryset = queryset.filter(business__id=business)  # Filter by business ID
+        if rating:
+            queryset = queryset.filter(rating=rating)  # Filter by rating
+
+        queryset = queryset.order_by('-rating') 
+        
+        return queryset
+
+class ReviewListCreateView(generics.ListCreateAPIView):
+    serializer_class = ReviewSerializer
+
+    def get_queryset(self):
+        # Get the queryset based on the business and rating parameters
+        queryset = Review.objects.all().order_by('business', '-rating')
+        
+        business = self.request.query_params.get('business', None)
+        rating = self.request.query_params.get('rating', None)
+        if business:
+            queryset = queryset.filter(business__id=business)  # Filter by business ID
+        if rating:
+            queryset = queryset.filter(rating=rating)  # Filter by rating
+
+        queryset = queryset.order_by('-rating') 
+        
+        return queryset
 
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Review.objects.all()
@@ -132,9 +193,25 @@ class BusinessImagesDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BusinessImagesSerializer
 
 
+class HourlyRateThrottle(UserRateThrottle):
+    rate = '3/h'  
+
+    def allow_request(self, request, view):
+        is_allowed = super().allow_request(request, view)
+        
+        if not is_allowed:  
+            response = Response(
+                {"message": "You have exceeded the number of allowed requests per hour."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )  
+            return response
+        return is_allowed
+
+
 class UserSignUpView(generics.CreateAPIView):
     queryset = Users.objects.all()
     serializer_class = UserSignUpSerializer
+    throttle_classes = [HourlyRateThrottle]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -147,21 +224,19 @@ class UserSignUpView(generics.CreateAPIView):
 
 class LoginView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [HourlyRateThrottle]
 
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
-
-        # Authenticate the user
+        
         user = authenticate(username=username, password=password)
 
         if user:
-            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)
             refresh_token = str(refresh)
-
-            # Return the user ID along with tokens
+  
             return Response({
                 'userId': user.id,
                 'username': user.username,

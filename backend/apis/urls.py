@@ -8,13 +8,15 @@ from .views import (
     MessagesListCreateView, MessagesDetailView,
     BusinessImagesListCreateView, BusinessImagesDetailView,
     UserSignUpView,
-    LoginView
+    LoginView,
+    BusinessOwnerView
 )
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
     path('businesses/', BusinessListCreateView.as_view(), name='business-list-create'),
     path('businesses/<int:pk>/', BusinessDetailView.as_view(), name='business-detail'),
+    path('businesses/owner/', BusinessOwnerView.as_view(), name='business-owner-list'),
 
     path('users/', UsersListCreateView.as_view(), name='users-list-create'),
     path('users/<int:pk>/', UsersDetailView.as_view(), name='users-detail'),

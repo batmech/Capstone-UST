@@ -113,7 +113,7 @@ class Business(models.Model):
     description = models.TextField()
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     date_registered = models.DateTimeField(auto_now_add=True)
-    images = models.ImageField(upload_to=temporary_image_upload_path)
+    images = models.ImageField(upload_to=temporary_image_upload_path, blank=True, null=True)
     work_time = models.JSONField(blank=False, default=default_work_time, null=True)
     
     def __str__(self):
@@ -144,7 +144,7 @@ class Review(models.Model):
     title = models.CharField(max_length=50)
     content = models.TextField()
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])    
-    likes = models.IntegerField()
+    likes = models.IntegerField(default=0, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
