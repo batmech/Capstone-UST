@@ -45,17 +45,31 @@ class BusinessListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = Business.objects.all()
+        
+        # Get category, address, zipcode, and b_name from query parameters
         category = self.request.query_params.get('category', None)
+        address = self.request.query_params.get('address', None)
+        zipcode = self.request.query_params.get('zipcode', None)
+        b_name = self.request.query_params.get('b_name', None)
+
+        # Apply filters based on query parameters
         if category:
             queryset = queryset.filter(category=category)
+        if address:
+            queryset = queryset.filter(address__icontains=address)  # Case-insensitive search
+        if zipcode:
+            queryset = queryset.filter(zipcode=zipcode)
+        if b_name:
+            queryset = queryset.filter(b_name__icontains=b_name)  # Case-insensitive search
+        
         return queryset
 
     def perform_create(self, serializer):
-        
         if self.request.user.is_authenticated:
             serializer.save(owner=self.request.user)
         else:
             raise PermissionDenied("You must be logged in to create a business.")
+
 
 class BusinessOwnerView(generics.ListAPIView):
     serializer_class = BusinessSerializer
@@ -102,55 +116,23 @@ class ReviewListCreateView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        # Get the queryset based on the business and rating parameters
-        queryset = Review.objects.all().order_by('business', '-rating')
+        queryset = Review.objects.all()
         
+        # Get query parameters
         business = self.request.query_params.get('business', None)
         rating = self.request.query_params.get('rating', None)
+        user = self.request.query_params.get('user', None)
 
+        # Apply filters based on query parameters
         if business:
-            queryset = queryset.filter(business__id=business)  # Filter by business ID
+            queryset = queryset.filter(business__id=business)
         if rating:
-            queryset = queryset.filter(rating=rating)  # Filter by rating
+            queryset = queryset.filter(rating=rating)
+        if user:
+            queryset = queryset.filter(user__id=user)
 
-        queryset = queryset.order_by('-rating') 
-        
-        return queryset
-
-class ReviewListCreateView(generics.ListCreateAPIView):
-    serializer_class = ReviewSerializer
-
-    def get_queryset(self):
-        # Get the queryset based on the business and rating parameters
-        queryset = Review.objects.all().order_by('business', '-rating')
-        
-        business = self.request.query_params.get('business', None)
-        rating = self.request.query_params.get('rating', None)
-
-        if business:
-            queryset = queryset.filter(business__id=business)  # Filter by business ID
-        if rating:
-            queryset = queryset.filter(rating=rating)  # Filter by rating
-
-        queryset = queryset.order_by('-rating') 
-        
-        return queryset
-
-class ReviewListCreateView(generics.ListCreateAPIView):
-    serializer_class = ReviewSerializer
-
-    def get_queryset(self):
-        # Get the queryset based on the business and rating parameters
-        queryset = Review.objects.all().order_by('business', '-rating')
-        
-        business = self.request.query_params.get('business', None)
-        rating = self.request.query_params.get('rating', None)
-        if business:
-            queryset = queryset.filter(business__id=business)  # Filter by business ID
-        if rating:
-            queryset = queryset.filter(rating=rating)  # Filter by rating
-
-        queryset = queryset.order_by('-rating') 
+        # Order by business and rating
+        queryset = queryset.order_by('business', '-rating')
         
         return queryset
 
@@ -241,6 +223,7 @@ class LoginView(APIView):
                 'userId': user.id,
                 'username': user.username,
                 'refresh': refresh_token,
+                'is_business_owner': user.is_business_owner,
                 'access': access_token,
             }, status=status.HTTP_200_OK)
 
